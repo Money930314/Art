@@ -208,6 +208,21 @@
     </div>
   </section>
 
+  <section id="profile" class="container py-5" data-theme="light" data-auth="authed" hidden>
+    <h3 class="mb-3">會員資料</h3>
+    <form id="profileForm" class="vstack gap-3" style="max-width:520px">
+      <input class="form-control" id="pf_name" placeholder="姓名">
+      <input class="form-control" id="pf_phone" placeholder="電話">
+      <input class="form-control" id="pf_addr" placeholder="地址">
+      <button class="btn btn-dark" type="submit">儲存</button>
+    </form>
+  </section>
+
+  <section id="admin" class="container py-5" data-theme="light" data-auth="authed" hidden>
+    <h3 class="mb-3">會員管理（僅管理員）</h3>
+    <div id="userTableWrap" class="table-responsive"></div>
+  </section>
+
   <footer class="footer" data-theme="dark">
     <div class="container">
       <div class="row">
@@ -289,18 +304,55 @@
               <form id="signupForm" class="vstack gap-3">
                 <input type="text" class="form-control" id="signupName" placeholder="姓名" required>
                 <input type="email" class="form-control" id="signupEmail" placeholder="Email" required>
-                <input type="password" class="form-control" id="signupPassword" placeholder="密碼（至少 6 碼）" minlength="6" required>
+                <input type="password" class="form-control" id="signupPassword" placeholder="密碼（至少 6 碟）" minlength="6" required>
                 <button type="submit" class="btn btn-dark">註冊並登入</button>
               </form>
             </div>
           </div>
-          <div class="form-text mt-3">* 示範用：資料儲存在瀏覽器 LocalStorage。</div>
+          <div class="form-text mt-3">* 使用 Supabase Auth；資料存入 profiles 表。<br>
+          <!--
+          Supabase SQL（請在 SQL Editor 執行一次）
+          --------------------------------------------------------------
+          create table if not exists public.profiles (
+            id uuid primary key references auth.users(id) on delete cascade,
+            full_name text,
+            phone text,
+            address text,
+            is_admin boolean default false,
+            created_at timestamptz default now(),
+            updated_at timestamptz default now()
+          );
+          create or replace function public.handle_new_user()
+          returns trigger as $$
+          begin
+            insert into public.profiles (id, full_name)
+            values (new.id, COALESCE(new.raw_user_meta_data->>'name',''));
+            return new;
+          end;
+          $$ language plpgsql security definer;
+          drop trigger if exists on_auth_user_created on auth.users;
+          create trigger on_auth_user_created
+            after insert on auth.users
+            for each row execute procedure public.handle_new_user();
+          alter table public.profiles enable row level security;
+          create policy "read own" on public.profiles for select using (id = auth.uid());
+          create policy "update own" on public.profiles for update using (id = auth.uid());
+          create policy "admin read all" on public.profiles for select
+            using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_admin = true));
+          create policy "admin update all" on public.profiles for update
+            using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_admin = true));
+          --------------------------------------------------------------
+          -- 把某個使用者升級為管理員：
+          -- update public.profiles set is_admin = true where id = 'YOUR-USER-ID';
+          -- ------------------------------------------------------------>
+          </div>
         </div>
       </div>
     </div>
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <script>
     function setNavHeightVar(){
@@ -312,9 +364,7 @@
     window.addEventListener('resize', setNavHeightVar, {passive:true});
     document.addEventListener('DOMContentLoaded', setNavHeightVar);
     setNavHeightVar();
-  </script>
 
-  <script>
     (function() {
       const nav = document.getElementById('mainNav');
       const themedBlocks = Array.from(document.querySelectorAll('section[data-theme], footer[data-theme]'));
@@ -461,11 +511,11 @@
   <script>
     const API_BASE =
       location.origin.startsWith('http')
-        ? '' // 部署在 Vercel 同網域
-        : 'https://YOUR_VERCEL_DOMAIN_HERE'; // 若用本機 file:// 測試，改成你的 Vercel 網域
+        ? ''
+        : 'https://YOUR_VERCEL_DOMAIN_HERE';
 
     document.getElementById('btnCheckout').addEventListener('click', async () => {
-      if (!Auth.isLoggedIn()) { new bootstrap.Modal('#authModal').show(); return; }
+      if (!(await Auth.isLoggedIn())) { new bootstrap.Modal('#authModal').show(); return; }
 
       const items = Object.values(cart.items).map(it => ({
         name: it.name, price: it.price, qty: it.qty, product_id: it.id
@@ -474,14 +524,15 @@
       if (!items.length) { alert('購物車是空的'); return; }
 
       try {
+        const user = await Auth.currentUser();
         const resp = await fetch(`${API_BASE}/api/checkout-ecpay`, {
           method: 'POST',
           headers: { 'Content-Type':'application/json' },
           body: JSON.stringify({
             items,
-            email: Auth.currentUser()?.email || '',
-            name:  Auth.currentUser()?.name  || '',
-            user_id: null
+            email: user?.email || '',
+            name:  user?.name  || '',
+            user_id: user?.id || null
           })
         });
 
@@ -501,28 +552,10 @@
   </script>
 
   <script>
-    const USERS_KEY = 'users:v1';
-    const SESSION_KEY = 'session:v1';
-    const Auth = {
-      users: {}, session: null,
-      load(){ try{ this.users = JSON.parse(localStorage.getItem(USERS_KEY)) || {}; }catch{ this.users = {}; } this.session = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); },
-      save(){ localStorage.setItem(USERS_KEY, JSON.stringify(this.users)); localStorage.setItem(SESSION_KEY, JSON.stringify(this.session)); },
-      signup(name, email, password){
-        email = email.trim().toLowerCase();
-        if(this.users[email]) throw new Error('此 Email 已註冊');
-        this.users[email] = { name, email, password };
-        this.session = { email }; this.save(); return this.users[email];
-      },
-      login(email, password){
-        email = email.trim().toLowerCase();
-        const u = this.users[email];
-        if(!u || u.password !== password) throw new Error('帳號或密碼錯誤');
-        this.session = { email }; this.save(); return u;
-      },
-      logout(){ this.session = null; this.save(); },
-      isLoggedIn(){ return !!(this.session && this.users[this.session.email]); },
-      currentUser(){ return this.isLoggedIn() ? this.users[this.session.email] : null; }
-    };
+    const SUPABASE_URL  = 'https://YOUR_SUPABASE_URL';
+    const SUPABASE_ANON = 'YOUR_SUPABASE_ANON_KEY';
+
+    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
     function closeAuthModal(){
       const el = document.getElementById('authModal');
@@ -532,54 +565,147 @@
       document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
     }
 
-    function refreshAccountUI(){
-      const area = document.getElementById('accountArea');
-      if(!area) return;
-      if(!Auth.isLoggedIn()){
-        area.innerHTML = '<a href="#" id="userBtn" data-bs-toggle="modal" data-bs-target="#authModal"><i class="bi bi-person"></i></a>';
-      }else{
-        const u = Auth.currentUser();
-        area.innerHTML = `
-          <div class="dropdown">
-            <a class="d-inline-flex align-items-center text-decoration-none dropdown-toggle" href="#" data-bs-toggle="dropdown">
-              <i class="bi bi-person-circle me-1"></i><span>Hi, ${u.name}</span>
-            </a>
-            <ul class="dropdown-menu dropdown-menu-end">
-              <li><a class="dropdown-item" href="#" id="btnViewOrders">我的訂單（示範）</a></li>
-              <li><hr class="dropdown-divider"></li>
-              <li><a class="dropdown-item" href="#" id="btnLogout">登出</a></li>
-            </ul>
-          </div>`;
-        area.querySelector('#btnLogout').addEventListener('click', (e)=>{ e.preventDefault(); Auth.logout(); refreshAccountUI(); });
-        area.querySelector('#btnViewOrders').addEventListener('click', (e)=>{ e.preventDefault(); alert('示範：尚未串接訂單列表'); });
-      }
+    async function fetchMyProfile(){
+      const { data: { user } } = await sb.auth.getUser();
+      if(!user) return null;
+      const { data, error } = await sb.from('profiles').select('*').eq('id', user.id).single();
+      if(error) return null;
+      return data;
     }
 
-    document.addEventListener('DOMContentLoaded', ()=>{
-      Auth.load(); refreshAccountUI();
-
-      document.getElementById('loginForm').addEventListener('submit', (e)=>{
-        e.preventDefault();
-        const email = document.getElementById('loginEmail').value;
-        const pass  = document.getElementById('loginPassword').value;
+    const Auth = {
+      async isLoggedIn(){
+        const { data: { session } } = await sb.auth.getSession();
+        return !!session?.user;
+      },
+      async currentUser(){
+        const { data: { user } } = await sb.auth.getUser();
+        if(!user) return null;
+        let name = user.user_metadata?.name || '';
         try{
-          Auth.login(email, pass);
-          refreshAccountUI();
-          closeAuthModal();
-        }catch(err){ alert(err.message || err); }
-      });
+          const p = await fetchMyProfile();
+          if(p?.full_name) name = p.full_name;
+        }catch{}
+        return { id:user.id, email:user.email, name };
+      },
+      async logout(){ await sb.auth.signOut(); refreshAccountUI(); }
+    };
 
-      document.getElementById('signupForm').addEventListener('submit', (e)=>{
-        e.preventDefault();
-        const name = document.getElementById('signupName').value;
-        const email= document.getElementById('signupEmail').value;
-        const pass = document.getElementById('signupPassword').value;
-        try{
-          Auth.signup(name, email, pass);
-          refreshAccountUI();
-          closeAuthModal();
-        }catch(err){ alert(err.message || err); }
-      });
+    async function refreshAccountUI(){
+      const area = document.getElementById('accountArea');
+      const authed = await Auth.isLoggedIn();
+      if(!authed){
+        area.innerHTML = '<a href="#" id="userBtn" data-bs-toggle="modal" data-bs-target="#authModal"><i class="bi bi-person"></i></a>';
+        document.querySelectorAll('[data-auth="authed"]').forEach(el=>el.hidden = true);
+        return;
+      }
+      const user = await Auth.currentUser();
+      document.querySelectorAll('[data-auth="authed"]').forEach(el=>el.hidden = false);
+      const isAdmin = await checkIsAdmin();
+      area.innerHTML = `
+        <div class="dropdown">
+          <a class="d-inline-flex align-items-center text-decoration-none dropdown-toggle" href="#" data-bs-toggle="dropdown">
+            <i class="bi bi-person-circle me-1"></i><span>Hi, ${user?.name || '會員'}</span>
+          </a>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <li><a class="dropdown-item" href="#profile" id="btnProfileLink">我的資料</a></li>
+            ${isAdmin ? '<li><a class="dropdown-item" href="#admin" id="btnAdminLink">會員管理</a></li>' : ''}
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item" href="#" id="btnLogout">登出</a></li>
+          </ul>
+        </div>`;
+      area.querySelector('#btnLogout')?.addEventListener('click', async (e)=>{ e.preventDefault(); await Auth.logout(); });
+      area.querySelector('#btnProfileLink')?.addEventListener('click', (e)=>{ e.preventDefault(); document.querySelector('#profile')?.scrollIntoView({behavior:'smooth'}); });
+      area.querySelector('#btnAdminLink')?.addEventListener('click', (e)=>{ e.preventDefault(); document.querySelector('#admin')?.scrollIntoView({behavior:'smooth'}); });
+    }
+
+    document.getElementById('loginForm').addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const email = document.getElementById('loginEmail').value;
+      const pass  = document.getElementById('loginPassword').value;
+      const { error } = await sb.auth.signInWithPassword({ email, password: pass });
+      if(error){ alert(error.message); return; }
+      closeAuthModal();
+      refreshAccountUI();
+      await loadProfileUI();
+      await loadAdminUsers();
+    });
+
+    document.getElementById('signupForm').addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const name = document.getElementById('signupName').value;
+      const email= document.getElementById('signupEmail').value;
+      const pass = document.getElementById('signupPassword').value;
+      const { error } = await sb.auth.signUp({ email, password: pass, options: { data: { name } } });
+      if(error){ alert(error.message); return; }
+      try{ await sb.auth.signInWithPassword({ email, password: pass }); }catch{}
+      closeAuthModal();
+      refreshAccountUI();
+      await loadProfileUI();
+      await loadAdminUsers();
+    });
+
+    async function loadProfileUI(){
+      const p = await fetchMyProfile(); if(!p) { document.querySelector('#profile')?.setAttribute('hidden',''); return; }
+      document.querySelector('#profile')?.removeAttribute('hidden');
+      pf_name.value = p.full_name || '';
+      pf_phone.value = p.phone || '';
+      pf_addr.value = p.address || '';
+    }
+    profileForm.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const { data: { user } } = await sb.auth.getUser(); if(!user){ alert('未登入'); return; }
+      const patch = {
+        full_name: pf_name.value.trim(),
+        phone: pf_phone.value.trim(),
+        address: pf_addr.value.trim(),
+        updated_at: new Date().toISOString()
+      };
+      const { error } = await sb.from('profiles').update(patch).eq('id', user.id);
+      if(error){ alert(error.message); return; }
+      alert('已儲存');
+      refreshAccountUI();
+    });
+
+    async function checkIsAdmin(){
+      const { data: { user } } = await sb.auth.getUser(); if(!user) return false;
+      const { data } = await sb.from('profiles').select('is_admin').eq('id', user.id).single();
+      return !!data?.is_admin;
+    }
+
+    async function loadAdminUsers(){
+      if(!(await checkIsAdmin())){ document.querySelector('#admin')?.setAttribute('hidden',''); return; }
+      document.querySelector('#admin')?.removeAttribute('hidden');
+      const { data, error } = await sb.from('profiles')
+        .select('id, full_name, phone, address, is_admin, created_at')
+        .order('created_at', { ascending:false });
+      if(error){ alert(error.message); return; }
+      const rows = (data||[]).map(p=>`
+        <tr>
+          <td style="font-family:monospace">${p.id}</td>
+          <td>${p.full_name||''}</td>
+          <td>${p.phone||''}</td>
+          <td>${p.address||''}</td>
+          <td>${p.is_admin ? '✔︎':''}</td>
+          <td>${new Date(p.created_at).toLocaleString()}</td>
+        </tr>`).join('');
+      userTableWrap.innerHTML = `
+        <table class="table table-sm align-middle">
+          <thead><tr>
+            <th>User ID</th><th>姓名</th><th>電話</th><th>地址</th><th>Admin</th><th>註冊時間</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>`;
+    }
+
+    (async ()=>{
+      await refreshAccountUI();
+      if(await Auth.isLoggedIn()){ await loadProfileUI(); await loadAdminUsers(); }
+    })();
+
+    sb.auth.onAuthStateChange(async (_event, session)=>{
+      await refreshAccountUI();
+      if(session?.user){ await loadProfileUI(); await loadAdminUsers(); }
     });
   </script>
 </body>
