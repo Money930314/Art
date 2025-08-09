@@ -493,6 +493,30 @@
       const off = bootstrap.Offcanvas.getOrCreateInstance('#cartDrawer'); off.hide();
     });
   </script>
+  <script>
+    document.getElementById('btnCheckout').addEventListener('click', async () => {
+      if (!Auth.isLoggedIn()) { new bootstrap.Modal('#authModal').show(); return; }
+
+      const items = Object.values(cart.items).map(it => ({
+        name: it.name, price: it.price, qty: it.qty, product_id: it.id
+      }));
+
+      const resp = await fetch('/api/checkout-ecpay', {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json' },
+        body: JSON.stringify({
+          items,
+          email: Auth.currentUser()?.email || '',
+          name:  Auth.currentUser()?.name  || '',
+          user_id: null  // 之後若接 Supabase Auth 再帶使用者 UID
+        })
+      });
+
+      const html = await resp.text();
+      const w = window.open('', '_self'); // 同視窗導轉綠界
+      w.document.open(); w.document.write(html); w.document.close();
+    });
+  </script>
 
   <script>
     // ====== 會員系統（LocalStorage） ======
