@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>商品詳細</title>
+
+  <!-- 你的全站樣式（保持不變）-->
+  <link rel="stylesheet" href="styles.css">
+
+  <!-- 本頁專屬樣式 -->
+  <link rel="stylesheet" href="product.css">
+
+  <!-- （可選）Bootstrap，如果你的 styles.css 已有全站排版就可省略 -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css" rel="stylesheet"/>
+</head>
+<body>
+
+  <!-- ======== 導覽列：請用你「現有的 navbar」整段貼過來，保持不變 ======== -->
+  <!-- ▼示意（若你要完全一致，請把你自己的 navbar 原樣貼上取代這段） -->
+  <nav class="navbar navbar-expand-lg nav-dark navbar-dark" id="mainNav">
+    <div class="container">
+      <a class="navbar-brand" href="index.html">晨哥</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav mx-auto">
+          <li class="nav-item"><a class="nav-link" href="index.html#home">首頁</a></li>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="index.html#" role="button" data-bs-toggle="dropdown">作品分類</a>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item" href="#" data-category="teaware">茶具系列</a></li>
+              <li><a class="dropdown-item" href="#" data-category="dinnerware">餐具系列</a></li>
+              <li><a class="dropdown-item" href="#" data-category="decorative">裝飾系列</a></li>
+              <li><a class="dropdown-item" href="#" data-category="functional">生活用品</a></li>
+            </ul>
+          </li>
+          <li class="nav-item"><a class="nav-link" href="index.html#gallery">全部作品</a></li>
+          <li class="nav-item"><a class="nav-link" href="index.html#about">作品文章</a></li>
+        </ul>
+        <div class="d-flex align-items-center gap-3">
+          <a href="#"><i class="bi bi-instagram"></i></a>
+          <a href="#"><i class="bi bi-youtube"></i></a>
+          <a href="#"><i class="bi bi-search"></i></a>
+          <div id="accountArea">
+            <a href="#" id="userBtn"><i class="bi bi-person"></i></a>
+          </div>
+          <a href="#" id="cartToggle" class="position-relative" data-bs-toggle="offcanvas" data-bs-target="#cartDrawer" aria-controls="cartDrawer">
+            <i class="bi bi-cart"></i>
+            <span id="cartCount" class="position-absolute top-0 start-100 translate-middle badge rounded-pill badge-cart">0</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </nav>
+  <!-- ▲示意：請用你原本的導覽列取代 -->
+
+  <!-- 麵包屑 -->
+  <div class="container">
+    <nav class="pdp-breadcrumb" aria-label="breadcrumb">
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="index.html">首頁</a></li>
+        <li class="breadcrumb-item"><a href="index.html#gallery">所有產品</a></li>
+        <li id="bcCurrent" class="breadcrumb-item active" aria-current="page">商品</li>
+      </ol>
+    </nav>
+  </div>
+
+  <!-- 主要內容 -->
+  <main class="container pb-5">
+    <div id="pdp" class="pdp">
+      <!-- 左：畫廊 -->
+      <section class="pdp-gallery">
+        <div class="pdp-stage"><img id="stageImg" src="" alt=""></div>
+        <div id="thumbs" class="pdp-thumbs"></div>
+      </section>
+
+      <!-- 右：資訊 -->
+      <section class="pdp-info">
+        <h1 id="pName" class="pdp-name">Loading…</h1>
+        <div id="pPrice" class="pdp-price"></div>
+
+        <div id="variantWrap" class="pdp-variant d-none">
+          <label class="form-label">品項</label>
+          <select id="variantSelect" class="form-select form-select-sm"></select>
+        </div>
+
+        <div class="pdp-meta">
+          <div><span class="meta-label">庫存</span>：<span id="pStock">—</span></div>
+          <div><span class="meta-label">材質</span>：<span id="pMaterial">—</span></div>
+        </div>
+
+        <p id="pDesc" class="pdp-desc mt-3"></p>
+
+        <div class="d-flex align-items-center gap-2 mt-2">
+          <label for="qty" class="me-1">數量</label>
+          <div class="qty">
+            <button type="button" class="qty-btn" id="minusQty">−</button>
+            <input id="qty" class="qty-input" type="number" min="1" value="1">
+            <button type="button" class="qty-btn" id="plusQty">＋</button>
+          </div>
+        </div>
+
+        <button id="addBtn" class="btn btn-dark btn-lg w-100 mt-3">加入購物車</button>
+
+        <!-- 分享（簡易） -->
+        <div class="pdp-share">
+          <a id="share-fb"  target="_blank" rel="noopener">分享</a>
+          <a id="share-line" target="_blank" rel="noopener">LINE</a>
+        </div>
+      </section>
+    </div>
+
+    <!-- 作品資訊 -->
+    <section class="pdp-specs mt-5">
+      <h3 class="pdp-sec-title">作品資訊</h3>
+      <div class="table-responsive">
+        <table class="table table-bordered specs-table">
+          <tbody>
+          <tr>
+            <th>規格 (cm)</th>
+            <td id="sp-dimensions">—</td>
+            <th>容量</th>
+            <td id="sp-capacity">—</td>
+          </tr>
+          <tr>
+            <th>材質原料</th>
+            <td id="sp-materials">—</td>
+            <th>顏色</th>
+            <td id="sp-color">—</td>
+          </tr>
+          <tr>
+            <th>亮光程度</th>
+            <td id="sp-gloss">—</td>
+            <th>內容</th>
+            <td id="sp-contents">—</td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 作品細部 -->
+    <section class="pdp-details-block mt-4">
+      <h3 class="pdp-sec-title">作品細部</h3>
+      <div id="pdpDetails" class="pdp-details"></div>
+    </section>
+
+    <!-- 找不到商品 -->
+    <div id="notFound" class="text-center py-5 d-none">
+      <h3>找不到這個商品</h3>
+      <p class="text-muted">可能已下架或連結不正確。</p>
+      <a href="index.html#gallery" class="btn btn-outline-dark">回作品列表</a>
+    </div>
+  </main>
+
+  <!-- JS：Supabase / 資料載入 / 加入購物車 -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    // === 1) Supabase：改成你的專案（或沿用你全站已建立的 sb client）===
+    const SUPABASE_URL = window.SUPABASE_URL || 'YOUR_SUPABASE_URL';
+    const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || 'YOUR_SUPABASE_ANON_KEY';
+    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // === 2) 取得 URL id ===
+    const params = new URLSearchParams(location.search);
+    const productId = parseInt(params.get('id'), 10);
+
+    // === 3) 簡易購物車回退：若全站已有 addToCart(id, qty, variant) 就直接用 ===
+    function fallbackAddToCart(id, qty, variant){
+      const key = 'cart';
+      const cart = JSON.parse(localStorage.getItem(key) || '[]');
+      const f = cart.find(i => i.id===id && (i.variant||'')===(variant||''));
+      if(f){ f.qty += qty; } else { cart.push({id, qty, variant: variant||''}); }
+      localStorage.setItem(key, JSON.stringify(cart));
+      updateCartCount();
+      alert('已加入購物車');
+    }
+    function updateCartCount(){
+      const el = document.getElementById('cartCount');
+      if(!el) return;
+      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+      el.textContent = cart.reduce((s,i)=>s+i.qty,0);
+    }
+
+    // === 4) 資料載入 ===
+    async function loadProduct(){
+      if(!productId || Number.isNaN(productId)){
+        document.getElementById('pdp').classList.add('d-none');
+        document.getElementById('notFound').classList.remove('d-none');
+        return;
+      }
+
+      // 4-1 商品基本資訊（請確認你的欄位）
+      const { data: product, error } = await sb
+        .from('products')
+        .select('*')
+        .eq('id', productId)
+        .single();
+
+      if(error || !product){
+        document.getElementById('pdp').classList.add('d-none');
+        document.getElementById('notFound').classList.remove('d-none');
+        return;
+      }
+
+      // 4-2 多張圖片（若你沒有這張表；可直接用 product.image）
+      const { data: imgs } = await sb
+        .from('product_images')          // 欄位：product_id, url, sort
+        .select('url, sort')
+        .eq('product_id', productId)
+        .order('sort', {ascending:true});
+
+      // 4-3 品項（variants）可用獨立表或 JSON
+      let variants = [];
+      if(product.variants){             // 若你存在 JSON 欄位
+        try { variants = JSON.parse(product.variants); } catch(e){ variants = []; }
+      }else{
+        // 也可改成查 variants 表
+        // const { data: vs } = await sb.from('variants').select('*').eq('product_id', productId);
+        // variants = vs || [];
+      }
+
+      // === 5) 填前端 ===
+      document.title = product.name + '｜商品詳細';
+      document.getElementById('bcCurrent').textContent = product.name;
+      document.getElementById('pName').textContent = product.name;
+      document.getElementById('pPrice').textContent = 'NT$ ' + Number(product.price||0).toLocaleString('zh-TW');
+      document.getElementById('pStock').textContent = (product.stock ?? 0);
+      document.getElementById('pMaterial').textContent = product.material ?? '—';
+      document.getElementById('pDesc').textContent = product.description ?? '';
+
+      // 圖片
+      const stage = document.getElementById('stageImg');
+      const thumbs = document.getElementById('thumbs');
+      const list = (imgs && imgs.length) ? imgs.map(i=>i.url) : [product.image].filter(Boolean);
+      if(list.length){
+        stage.src = list[0];
+        thumbs.innerHTML = list.map((u,i)=>`
+          <button type="button" class="thumb ${i===0?'active':''}" data-url="${u}">
+            <img src="${u}" alt="thumb-${i}">
+          </button>
+        `).join('');
+        thumbs.addEventListener('click', e=>{
+          const btn = e.target.closest('.thumb'); if(!btn) return;
+          stage.src = btn.dataset.url;
+          thumbs.querySelectorAll('.thumb').forEach(b=>b.classList.remove('active'));
+          btn.classList.add('active');
+        });
+      }
+
+      // 品項選單（若有）
+      if(variants && variants.length){
+        const wrap = document.getElementById('variantWrap');
+        const sel  = document.getElementById('variantSelect');
+        wrap.classList.remove('d-none');
+        sel.innerHTML = variants.map(v=>`<option value="${v.id||v.value||v}">${v.name||v.label||v}</option>`).join('');
+      }
+
+      // 作品資訊（表格）
+      // 建議把細項存到 product.specs(JSON)；這裡做通用填值
+      let specs = {};
+      try { specs = product.specs ? JSON.parse(product.specs) : {}; } catch(e){ specs = {}; }
+      document.getElementById('sp-dimensions').textContent = specs.dimensions || '—';
+      document.getElementById('sp-capacity').textContent   = specs.capacity   || '—';
+      document.getElementById('sp-materials').textContent  = specs.materials  || product.material || '—';
+      document.getElementById('sp-color').textContent      = specs.color      || '—';
+      document.getElementById('sp-gloss').textContent      = specs.gloss      || '—';
+      document.getElementById('sp-contents').textContent   = specs.contents   || '—';
+
+      // 作品細部：把第2張之後的圖當細部
+      const detail = document.getElementById('pdpDetails');
+      if(list.length>1){
+        detail.innerHTML = list.slice(1).map(u=>`<img class="detail-img" src="${u}" alt="detail">`).join('');
+      }else{
+        detail.innerHTML = `<div class="text-muted">無其他細部圖片</div>`;
+      }
+
+      // 分享
+      document.getElementById('share-fb').href   = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(location.href)}`;
+      document.getElementById('share-line').href = `https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(location.href)}`;
+
+      // 數量 stepper
+      const ipt = document.getElementById('qty');
+      document.getElementById('minusQty').addEventListener('click', ()=> ipt.value = Math.max(1, (+ipt.value||1)-1));
+      document.getElementById('plusQty').addEventListener('click', ()=> ipt.value = Math.max(1, (+ipt.value||1)+1));
+
+      // 加入購物車
+      const addBtn = document.getElementById('addBtn');
+      addBtn.disabled  = (product.stock ?? 0) <= 0;
+      addBtn.textContent = addBtn.disabled ? '售完' : '加入購物車';
+      addBtn.addEventListener('click', ()=>{
+        const qty = Math.max(1, parseInt(ipt.value,10) || 1);
+        const variant = (document.getElementById('variantSelect')||{}).value || '';
+        if(typeof window.addToCart === 'function'){
+          window.addToCart(productId, qty, variant);
+        }else{
+          fallbackAddToCart(productId, qty, variant);
+        }
+      });
+
+      updateCartCount();
+    }
+
+    loadProduct();
+  </script>
+</body>
+</html>

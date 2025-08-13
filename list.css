@@ -1,0 +1,24 @@
+/* 產品清單：4 欄（桌機），2 欄（平板），1 欄（手機） */
+#productGrid{
+  display:grid;
+  grid-template-columns: repeat(4, minmax(0,1fr));
+  gap: 28px;
+}
+@media (max-width: 1200px){
+  #productGrid{ grid-template-columns: repeat(3, minmax(0,1fr)); }
+}
+@media (max-width: 992px){
+  #productGrid{ grid-template-columns: repeat(2, minmax(0,1fr)); }
+}
+@media (max-width: 640px){
+  #productGrid{ grid-template-columns: 1fr; }
+}
+
+/* 讓整張卡片可點（不影響你原本視覺） */
+.product-card {
+  position: relative;
+}
+.product-card a.card-link{
+  position:absolute; inset:0; z-index:3; /* 僅負責點擊，視覺仍由原樣式呈現 */
+  text-indent:-9999px; overflow:hidden;
+}
